@@ -33,7 +33,7 @@ const languageStrings =  {
  * @type {*[]}
  */
 const questionList = [
-    { question:"<the question>", answer:["<the acceptable answer>","<the acceptable answer2>"]},
+    { question:"Who am I?", answer:["BrewzTrains","Mike Rose"]},
 ];
 
 /**
@@ -44,7 +44,7 @@ const questionList = [
  */
 exports.handler = function(event, context, callback) {
 
-    var alexa = Alexa.handler(event, context);
+    let alexa = Alexa.handler(event, context);
 
     alexa.resources = languageStrings;
 
@@ -153,23 +153,23 @@ const practiceHandlers = Alexa.CreateStateHandler(states.PRACTICE, {
     },
 
     'AnswerIntent' : function() {
-        var theAnswer = '';
+        let theAnswer = '';
 
-        if (this.event.request.intent.slots.answer || this.event.request.intent.slots.answer.value == '') {
+        if (this.event.request.intent.slots.answer || this.event.request.intent.slots.answer.value === '') {
             this.emitWithState('AMAZON.HelpIntent');
         } else {
             theAnswer = this.event.request.intent.slots.answer.value;
 
             this.emit('rateAnswer', theAnswer, (say) => {
-                var currentQuestionIndex = this.attributes['currentQuestionIndex'];
+                let currentQuestionIndex = this.attributes['currentQuestionIndex'];
 
                 if (currentQuestionIndex < this.attributes['sessionQuestionList'].length) {
-                    say = say + 'Next question, ' + this.attributes[sessionQuestionList][currentQuestionIndex].quesiton + '? ';
+                    say = say + 'Next question, ' + this.attributes[sessionQuestionList][currentQuestionIndex].question + '? ';
                     this.reponse.speak(say).listen(say);
                     this.emit(':responseReady');
                 } else {
                     this.handler.state = states.RECAP_PRACTICE;
-                    this.emitWithWState('ReacapSession', say);
+                    this.emitWithState('ReacapSession', say);
                 }
             });
         }
@@ -255,7 +255,7 @@ const recapQuizHandlers = Alexa.CreateStateHandler(states.RECAP_QUIZ, {
 
         say = say + 'You are done.' + scoreSummary.replace('\n','') + ' I have sent this result to your Alexa App. ';
         if (this.attributes['WrongCount'] === 0) {
-            say += ' Great Job! You can sa stop if you are done. Would you like to start over? ';
+            say += ' Great Job! You can say stop if you are done. Would you like to start over? ';
         } else {
             say += ' Would you like to practice some more now?';
         }
@@ -279,7 +279,7 @@ const recapQuizHandlers = Alexa.CreateStateHandler(states.RECAP_QUIZ, {
 
     },
     'AMAZON.NoIntent': function () {  //
-        var say = 'Okay, see you next time, goodbye!';
+        let say = 'Okay, see you next time, goodbye!';
         this.response.speak(say);
         this.emit(':responseReady');
     },
@@ -309,4 +309,34 @@ const scoreHandlers  = {
             say = answerGuess + ' is wrong! The correct answer to the question'
         }
     }
+};
+
+function randomizeArray(myArray, recordCount) {
+    let sliceLimit = myArray.length;
+    if (recordCount) {
+        sliceLimit = recordCount;
+    }
+    let m = myArray.length, t, i;
+
+    while (m) {
+
+        i = Math.floor(Math.random() * m--);
+
+        t = myArray[m];
+        myArray[m] = myArray[i];
+        myArray[i] = t;
+
+    }
+
+    return myArray.slice(0, sliceLimit);
+}
+
+function pluralize(word, qty) {
+    let newWord = '';
+    if (qty === 1) {
+        newWord = word;
+    } else {
+        newWord = word + 's';
+    }
+    return qty.toString() + ' ' + newWord;
 }
