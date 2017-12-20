@@ -1,0 +1,84 @@
+{
+  "languageModel": {
+    "types": [
+      {
+        "name": "LIST_OF_ANSWERS",
+        "values": [
+          {
+            "id": null,
+            "name": {
+              "value": "backblock",
+              "synonyms": [
+                "back block"
+              ]
+            }
+          },
+          {
+            "id": null,
+            "name": {
+              "value": "BrewzTrains",
+              "synonyms": [
+                "Mike Rose",
+                "Brewz Trains"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "intents": [
+      {
+        "name": "AMAZON.CancelIntent",
+        "samples": []
+      },
+      {
+        "name": "AMAZON.HelpIntent",
+        "samples": []
+      },
+      {
+        "name": "AMAZON.NoIntent",
+        "samples": []
+      },
+      {
+        "name": "AMAZON.StopIntent",
+        "samples": []
+      },
+      {
+        "name": "AMAZON.YesIntent",
+        "samples": []
+      },
+      {
+        "name": "AnswerIntent",
+        "samples": [
+          "{theAnswer}",
+          "what is a {theAnswer}",
+          "it's a {theAnswer}",
+          "it's an {theAnswer}"
+        ],
+        "slots": [
+          {
+            "name": "theAnswer",
+            "type": "LIST_OF_ANSWERS"
+          }
+        ]
+      },
+      {
+        "name": "PracticeIntent",
+        "samples": [
+          "practice"
+        ],
+        "slots": []
+      },
+      {
+        "name": "QuizIntent",
+        "samples": [
+          "quiz",
+          "to quiz me",
+          "quiz me"
+        ],
+        "slots": []
+      }
+    ],
+    "invocationName": "brewz trains"
+  }
+}
