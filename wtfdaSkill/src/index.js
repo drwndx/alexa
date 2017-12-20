@@ -53,10 +53,11 @@ exports.handler = function(event, context, callback) {
 
     alexa.registerHandlers (
         newSessionHandlers,
-        startSessionHalders,
+        startSessionHandlers,
         practiceHandlers,
         quizHandlers,
         recapPracticeHandlers,
+        recapQuizHandlers,
         scoreHandlers
     );
 
@@ -93,31 +94,31 @@ const newSessionHandlers = {
 /**
  * defines default session vars, intent vars, and intent actions
  */
-const startSessionHandlers = Alexa.CreateStateHandler(states.start, {
-   'NewSession': function() {
-       this.attributes['questionList'] = questionList;
-       this.attributes['correctCount'] = 0;
-       this.attributes['wrongCount'] = 0;
-       this.attributes['wrongList'] = [];
-       this.response.speak(this.t('WELCOME_LAUNCH')).listen(this.t("TITLE"));
-       this.emit(':responseReady');
-   },
-   "PracticeIntent": function() {
-       this.handler.state = states.PRACTICE;
-       this.response.speak(this.t("WELCOME_PRACTICE", questionList.length)).listen(this.t("WELCOME_PRACTICE", questionList.length));
-       this.emit(':responseReady');
-   },
+const startSessionHandlers = Alexa.CreateStateHandler(states.START, {
+    'NewSession': function() {
+        this.attributes['questionList'] = questionList;
+        this.attributes['correctCount'] = 0;
+        this.attributes['wrongCount'] = 0;
+        this.attributes['wrongList'] = [];
+        this.response.speak(this.t('WELCOME_LAUNCH')).listen(this.t("TITLE"));
+        this.emit(':responseReady');
+    },
+    "PracticeIntent": function() {
+        this.handler.state = states.PRACTICE;
+        this.response.speak(this.t("WELCOME_PRACTICE", questionList.length)).listen(this.t("WELCOME_PRACTICE", questionList.length));
+        this.emit(':responseReady');
+    },
     "QuizIntent": function() {
-       this.handler.state = states.QUIZ;
-       this.response.speak(this.t("WELCOME_QUIZ", options.QUESTIONS_PER_QUIZ)).listen(this.t("WELCOME_QUIZ", options.QUESTIONS_PER_QUIZ));
-       this.emit(':responseReady');
+        this.handler.state = states.QUIZ;
+        this.response.speak(this.t("WELCOME_QUIZ", options.QUESTIONS_PER_QUIZ)).listen(this.t("WELCOME_QUIZ", options.QUESTIONS_PER_QUIZ));
+        this.emit(':responseReady');
     },
     "AMAZON.HelpIntent": function() {
-       this.response.speak(this.t("HELP_MESSAGE", questionList.length, options.QUESTIONS_PER_QUIZ)).listen(this.t("HELP_MESSAGE", questionList.length, options.QUESTIONS_PER_QUIZ));
-       this.emit(':responseReady');
+        this.response.speak(this.t("HELP_MESSAGE", questionList.length, options.QUESTIONS_PER_QUIZ)).listen(this.t("HELP_MESSAGE", questionList.length, options.QUESTIONS_PER_QUIZ));
+        this.emit(':responseReady');
     },
     "AMAZON.CancelIntent": function() {
-        this.response.speak("Goodbye!")
+        this.response.speak("Goodbye!");
         this.emit(':responseReady');
     },
     "AMAZON.StopIntent": function() {
@@ -129,7 +130,7 @@ const startSessionHandlers = Alexa.CreateStateHandler(states.start, {
 const practiceHandlers = Alexa.CreateStateHandler(states.PRACTICE, {
 
     'NewSession': function() {
-        this.emit('NewSession')
+        this.emit('NewSession');
     },
 
     'AMAZON.YesIntent': function() {
@@ -155,21 +156,21 @@ const practiceHandlers = Alexa.CreateStateHandler(states.PRACTICE, {
     'AnswerIntent' : function() {
         let theAnswer = '';
 
-        if (this.event.request.intent.slots.answer || this.event.request.intent.slots.answer.value === '') {
+        if ( !this.event.request.intent.slots.theAnswer || this.event.request.intent.slots.theAnswer.value === '') {
             this.emitWithState('AMAZON.HelpIntent');
         } else {
-            theAnswer = this.event.request.intent.slots.answer.value;
+            theAnswer = this.event.request.intent.slots.LIST_OF_ANSWERS.value;
 
             this.emit('rateAnswer', theAnswer, (say) => {
                 let currentQuestionIndex = this.attributes['currentQuestionIndex'];
 
                 if (currentQuestionIndex < this.attributes['sessionQuestionList'].length) {
-                    say = say + 'Next question, ' + this.attributes[sessionQuestionList][currentQuestionIndex].question + '? ';
+                    say = say + 'Next question, ' + this.attributes['sessionQuestionList'][currentQuestionIndex].question + '? ';
                     this.reponse.speak(say).listen(say);
                     this.emit(':responseReady');
                 } else {
                     this.handler.state = states.RECAP_PRACTICE;
-                    this.emitWithState('ReacapSession', say);
+                    this.emitWithState('RecapSession', say);
                 }
             });
         }
@@ -192,6 +193,68 @@ const practiceHandlers = Alexa.CreateStateHandler(states.PRACTICE, {
     }
 });
 
+const quizHandlers = Alexa.CreateStateHandler(states.QUIZ, {
+    'NewSession': function () {
+        this.emit('NewSession'); // Uses the handler in newSessionHandlers
+    },
+    'AMAZON.YesIntent': function () {
+
+        var say = '';
+
+        this.attributes['currentQuestionIndex'] = 0;
+
+        this.attributes['wrongCount'] = 0;
+        this.attributes['correctCount'] = 0;
+
+        this.attributes['sessionQuestionList'] = randomizeArray(this.attributes['questionList'], options.QUESTIONS_PER_QUIZ);
+
+        say = 'where is ' + this.attributes['sessionQuestionList'][0].question + '?';
+
+        this.response.speak('First question, ' + say).listen('First question, ' + say);
+        this.emit(':responseReady');
+
+    },
+    'AnswerIntent': function() {
+        var myAnswer = '';
+
+        if ( !this.event.request.intent.slots.theAnswer || this.event.request.intent.slots.theAnswer.value == '') {
+            this.emitWithState('AMAZON.HelpIntent');  // emitWithState = local version of this handler
+
+        } else {
+            myAnswer = this.event.request.intent.slots.theAnswer.value;
+
+            this.emit('rateAnswer', myAnswer, (say) => {
+                var currentQuestionIndex = this.attributes['currentQuestionIndex'];
+
+                if (currentQuestionIndex < this.attributes['sessionQuestionList'].length) {  // MORE QUESTIONS
+
+                    say = say +  ' Next question, where is ' + this.attributes['sessionQuestionList'][currentQuestionIndex].question + '? ';
+
+                    this.response.speak(say).listen(say);
+                    this.emit(':responseReady');
+
+                } else {   // YOU ARE DONE
+                    this.handler.state = states.RECAP_QUIZ;
+                    this.emitWithState('RecapSession', say);
+                }
+            });
+        }
+    },
+    'AMAZON.NoIntent': function() {
+        this.response.speak('Okay, see you next time, goodbye!');
+        this.emit(':responseReady');
+    },
+    'AMAZON.StopIntent': function() {
+        this.response.speak('Okay, see you next time, goodbye!');
+        this.emit(':responseReady');
+    },
+    'Unhandled': function() {
+        this.response.speak('Sorry, I didn\'t get that. Try again.').listen('Try again.');
+        this.emit(':responseReady');
+    }
+});
+
+
 const recapPracticeHandlers = Alexa.CreateStateHandler(states.RECAP_PRACTICE, {
     'NewSession': function() {
         this.emit('NewSession');
@@ -206,7 +269,7 @@ const recapPracticeHandlers = Alexa.CreateStateHandler(states.RECAP_PRACTICE, {
             this.emit(':responseReady');
 
         } else {
-            say += ' I have sent the ' + pluralize('question', this.attributes[wrongCount]) + 'you got wrong to your Alexa app.';
+            say = say + ' I have sent the ' + pluralize('question', this.attributes['wrongCount']) + 'you got wrong to your Alexa app.';
             say += ' Would you like to practice this list again now? ';
 
 
@@ -291,14 +354,15 @@ const recapQuizHandlers = Alexa.CreateStateHandler(states.RECAP_QUIZ, {
 });
 
 const scoreHandlers  = {
-    'rateAnswer': function (answerGuess, callback) {
 
+    'rateAnswer': function (answerGuess, callback) {
+        let say = '';
         let currentQuestionIndex = this.attributes['currentQuestionIndex'];
         let currentQuestion = this.attributes['sessionQuestionList'][currentQuestionIndex];
         if (currentQuestion.answer.indexOf(answerGuess) >= 0 ){
             this.attributes['correctCount'] += 1;
 
-            say = answerGuess + ' is right!'
+            say = answerGuess + ' is right!';
         } else {
             this.attributes['wrongCount'] += 1;
 
@@ -306,9 +370,14 @@ const scoreHandlers  = {
             wrongList.push(currentQuestion);
             this.attributes['wrongList'] = wrongList;
 
-            say = answerGuess + ' is wrong! The correct answer to the question'
+            say = answerGuess + ' is wrong! The correct answer to the question';
         }
-    }
+        currentQuestionIndex += 1;
+        this.attributes['currentQuestionIndex'] = currentQuestionIndex;
+
+        callback(say);
+    },
+
 };
 
 function randomizeArray(myArray, recordCount) {
